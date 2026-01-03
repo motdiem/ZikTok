@@ -33,9 +33,9 @@ app.get('/api/channel/:channelId/shorts', async (req, res) => {
 
     console.log(`Fetching shorts for channel: ${channelId}`);
 
-    // Step 1: Get channel's uploads playlist ID
+    // Step 1: Get channel's uploads playlist ID and info
     const channelResponse = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${YOUTUBE_API_KEY}`
+      `https://www.googleapis.com/youtube/v3/channels?part=contentDetails,snippet&id=${channelId}&key=${YOUTUBE_API_KEY}`
     );
     const channelData = await channelResponse.json();
 
