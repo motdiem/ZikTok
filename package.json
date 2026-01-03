@@ -1,0 +1,18 @@
+{
+  "name": "ziktok",
+  "version": "1.0.0",
+  "description": "A vanilla JavaScript PWA for browsing YouTube Shorts in a TikTok-style interface",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["youtube", "shorts", "pwa", "video"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0",
+    "dotenv": "^16.3.1"
+  }
+}

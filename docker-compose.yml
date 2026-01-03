@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  ziktok:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ziktok
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+    # Uncomment for persistent data (if you add features that need it)
+    # volumes:
+    #   - ./data:/app/data
+    # Synology NAS users: Use this path instead
+    #   - /volume1/docker/ziktok/data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    # Resource limits (Synology Container Manager: use mem_limit and cpus instead of deploy section)
+    # For Synology, uncomment these:
+    # mem_limit: 256m
+    # cpus: 0.5
+    # For Docker Swarm/standard Docker Compose, use deploy section:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

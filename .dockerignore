@@ -1,0 +1,41 @@
+# Node modules (will be installed in container)
+node_modules/
+npm-debug.log
+
+# Git files
+.git/
+.gitignore
+
+# Environment files (pass via docker run or docker-compose)
+.env
+.env.example
+
+# Documentation
+README.md
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Test files
+test/
+*.test.js
+coverage/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
