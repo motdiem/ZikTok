@@ -95,10 +95,17 @@ ZikTok/
 │   └── icon-512.png       # PWA icon (512x512)
 ├── server.js              # Express server (API proxy)
 ├── package.json           # Node.js dependencies
+├── package-lock.json      # Locked dependency versions (for Docker)
+├── Dockerfile             # Docker container definition
+├── docker-compose.yml     # Docker Compose configuration
+├── .dockerignore          # Docker build exclusions
+├── docker-test.sh         # Docker deployment validation script
 ├── .env                   # Environment variables (not in git)
 ├── .env.example           # Environment template
 ├── .gitignore             # Git ignore file
-└── README.md              # This file
+├── README.md              # This file (comprehensive documentation)
+├── DEPLOYMENT.md          # Quick deployment reference
+└── SYNOLOGY.md            # Synology NAS deployment guide
 ```
 
 ## Setup and Installation

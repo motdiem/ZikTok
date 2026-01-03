@@ -25,6 +25,7 @@ Complete guide for deploying ZikTok on your Synology NAS using Container Manager
      - `Dockerfile`
      - `docker-compose.yml`
      - `package.json`
+     - `package-lock.json` ⚠️ **Important!**
      - `server.js`
      - `public/` folder (with all contents)
 
@@ -374,6 +375,31 @@ sudo docker logs ziktok
 - Missing .env file → Create it
 - Invalid API key → Check your key
 - Insufficient permissions → Run with sudo
+
+### Docker build fails
+
+**Error: "npm ci can only install with an existing package-lock.json"**
+
+This means the package-lock.json file is missing from your upload.
+
+**Solution**:
+1. Make sure you uploaded ALL files including `package-lock.json`
+2. The file should be in the root directory alongside `package.json`
+3. If still missing, download the latest version from the repository
+4. Or generate it locally:
+   ```bash
+   npm install --package-lock-only
+   ```
+   Then upload the generated `package-lock.json` to your NAS
+
+**Alternative**: If you prefer not to use package-lock.json, modify the Dockerfile:
+- Change line 10 from: `RUN npm ci --only=production`
+- To: `RUN npm install --only=production`
+
+**Other build errors**:
+- **Out of disk space** → Check available space: `df -h`
+- **Network timeout** → Check internet connection from NAS
+- **Permission denied** → Use `sudo` for docker commands
 
 ### Can't access from browser
 
