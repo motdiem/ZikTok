@@ -336,14 +336,26 @@ sudo docker exec -it ziktok sh
 
 ## Updating the Application
 
-### Method 1: Container Manager
+### 🚀 Method 1: Easy Update Script (Recommended)
 
-1. Stop the container
-2. Delete the container (not the image)
-3. Update files via File Station
-4. Create new container from updated files
+We've created a simple script that handles everything automatically:
 
-### Method 2: Command Line
+```bash
+cd /volume1/docker/ziktok
+./update-synology.sh
+```
+
+This script will:
+1. Pull the latest code from git
+2. Stop and remove the old container
+3. Remove the old Docker image (forces rebuild with new files)
+4. Build a new image with updated code
+5. Start the new container
+6. Show you the status
+
+**Why remove the image?** Just stopping/deleting the container keeps the old code cached in the image. Removing the image forces Docker to rebuild with your updated files.
+
+### Method 2: Manual Update via Command Line
 
 ```bash
 cd /volume1/docker/ziktok
@@ -351,13 +363,34 @@ cd /volume1/docker/ziktok
 # Pull latest code (if using git)
 git pull
 
-# Rebuild and restart
+# Stop and remove container
 sudo docker-compose down
+
+# Remove old image to force rebuild
+sudo docker rmi ziktok-ziktok
+
+# Rebuild and start
 sudo docker-compose up -d --build
 
-# Or just restart
-sudo docker-compose restart
+# Check logs
+sudo docker-compose logs -f
 ```
+
+### Method 3: Container Manager GUI
+
+**Important:** Just deleting the container won't update the code! You need to delete the project or image.
+
+1. **Container Manager → Container** → Stop `ziktok`
+2. **Container Manager → Container** → Delete `ziktok`
+3. **Container Manager → Image** → Delete `ziktok-ziktok` (this forces rebuild)
+4. **Container Manager → Project** → Select `ziktok` → **Action → Build**
+5. Once built, start the project
+
+**Alternative (easier):** Delete and recreate the entire project:
+1. Stop the project
+2. Delete the project (files stay safe)
+3. Create new project pointing to same `/docker/ziktok` directory
+4. Start the project
 
 ---
 
