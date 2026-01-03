@@ -8,7 +8,9 @@ class ZikTok {
     this.currentIndex = 0;
     this.channels = this.loadChannels();
     this.sortMode = 'date'; // 'date' or 'random'
-    this.isMuted = false;
+    // Auto-mute on mobile for better autoplay compatibility
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+    this.isMuted = isMobile;
     this.players = {}; // YouTube player instances
     this.isLoadingVideos = false;
     this.currentVideoPlaying = true; // Track play state
@@ -18,6 +20,9 @@ class ZikTok {
     this.touchEndY = 0;
     this.isDragging = false;
     this.dragDistance = 0;
+
+    // Video navigation tracking (for swipe hint)
+    this.videoChanges = 0;
 
     // DOM Elements
     this.videoContainer = document.getElementById('video-container');
@@ -56,6 +61,9 @@ class ZikTok {
 
     // Hide loading screen
     this.hideLoading();
+
+    // Update mute button to reflect initial state (mobile starts muted)
+    this.updateMuteIcon();
 
     // Show swipe hint for first-time users
     this.showSwipeHint();
@@ -98,8 +106,8 @@ class ZikTok {
         e.preventDefault(); // Prevent page scrolling
       }
 
-      if (e.key === 'ArrowUp') this.previousVideo();
-      if (e.key === 'ArrowDown') this.nextVideo();
+      if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K') this.previousVideo();
+      if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J') this.nextVideo();
       if (e.key === 'ArrowLeft') this.previousVideo();
       if (e.key === 'ArrowRight') this.nextVideo();
       if (e.key === 'm' || e.key === 'M') this.toggleMute();
@@ -238,11 +246,20 @@ class ZikTok {
     // Create YouTube iframe
     const iframe = document.createElement('iframe');
     const videoId = video.id;
-    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${this.isMuted ? 1 : 0}&controls=0&modestbranding=1&rel=0&cc_load_policy=1&playsinline=1&loop=1&playlist=${videoId}`;
+    // Always mute on mobile to allow autoplay, user can unmute with button
+    const shouldMute = this.isMuted || this.isMobileDevice() ? 1 : 0;
+    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${shouldMute}&controls=0&modestbranding=1&rel=0&cc_load_policy=1&playsinline=1&loop=1&playlist=${videoId}`;
     iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     iframe.allowFullscreen = true;
     iframe.setAttribute('playsinline', '');
     iframe.id = `player-${videoIndex}`;
+
+    // Add tap to play for mobile Safari
+    slide.addEventListener('click', () => {
+      if (parseInt(slide.dataset.index) === this.currentIndex) {
+        this.playVideo(this.currentIndex);
+      }
+    });
 
     slide.appendChild(iframe);
     this.videoContainer.appendChild(slide);
@@ -268,9 +285,11 @@ class ZikTok {
     }
 
     this.currentIndex++;
+    this.videoChanges++;
     this.updateSlides('next');
     this.updateVideoInfo();
     this.playCurrentVideo();
+    this.checkHideSwipeHint();
   }
 
   previousVideo() {
@@ -279,9 +298,11 @@ class ZikTok {
     }
 
     this.currentIndex--;
+    this.videoChanges++;
     this.updateSlides('prev');
     this.updateVideoInfo();
     this.playCurrentVideo();
+    this.checkHideSwipeHint();
   }
 
   updateSlides(direction) {
@@ -414,13 +435,7 @@ class ZikTok {
 
   toggleMute() {
     this.isMuted = !this.isMuted;
-    const icon = document.getElementById('volume-icon');
-
-    if (this.isMuted) {
-      icon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
-    } else {
-      icon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>';
-    }
+    this.updateMuteIcon();
 
     // Update all iframes
     Object.keys(this.players).forEach(index => {
@@ -430,6 +445,17 @@ class ZikTok {
         iframe.contentWindow.postMessage(`{"event":"command","func":"${func}","args":""}`, '*');
       }
     });
+  }
+
+  updateMuteIcon() {
+    const icon = document.getElementById('volume-icon');
+    if (!icon) return;
+
+    if (this.isMuted) {
+      icon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+    } else {
+      icon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>';
+    }
   }
 
   async shareVideo() {
@@ -615,6 +641,21 @@ class ZikTok {
   hideSwipeHint() {
     this.swipeHint.classList.add('hidden');
     localStorage.setItem('ziktok_seen_hint', 'true');
+  }
+
+  checkHideSwipeHint() {
+    // Hide hint after 2 video changes (showing the second video)
+    if (this.videoChanges >= 2) {
+      this.hideSwipeHint();
+    }
+  }
+
+  // ===== Utilities =====
+
+  isMobileDevice() {
+    // Detect mobile devices (iOS, Android, etc.)
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+           (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
   }
 
   // ===== Import/Export Settings =====

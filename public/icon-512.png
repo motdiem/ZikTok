@@ -5,15 +5,19 @@
       <stop offset="100%" style="stop-color:#00f2ea;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <circle cx="256" cy="256" r="256" fill="url(#bg512)"/>
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="100" fill="url(#bg512)"/>
+  <!-- Shadow -->
   <text x="256" y="340" font-family="Arial, sans-serif" font-size="280" font-weight="900"
         text-anchor="middle" fill="rgba(0,0,0,0.3)" transform="translate(4, 4)">Z</text>
   <text x="256" y="340" font-family="Arial, sans-serif" font-size="120" font-weight="900"
         text-anchor="middle" fill="rgba(0,0,0,0.3)" transform="translate(4, 4)">T</text>
+  <!-- Main letters -->
   <text x="256" y="340" font-family="Arial, sans-serif" font-size="280" font-weight="900"
         text-anchor="middle" fill="#ffffff">Z</text>
   <text x="256" y="340" font-family="Arial, sans-serif" font-size="120" font-weight="900"
         text-anchor="middle" fill="#ffffff" transform="translate(95, -120)">T</text>
+  <!-- Accent circle -->
   <circle cx="380" cy="180" r="40" fill="#00f2ea" opacity="0.8"/>
   <circle cx="380" cy="180" r="25" fill="#ffffff"/>
 </svg>
