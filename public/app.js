@@ -141,7 +141,9 @@ class ZikTok {
     try {
       const response = await fetch(`/api/channel/${channelId}/shorts`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch shorts for channel ${channelId}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.details || errorData.error || `HTTP ${response.status}`;
+        throw new Error(`Failed to fetch shorts for channel ${channelId}: ${errorMsg}`);
       }
       return await response.json();
     } catch (error) {

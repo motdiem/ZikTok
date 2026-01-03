@@ -39,6 +39,16 @@ app.get('/api/channel/:channelId/shorts', async (req, res) => {
     );
     const channelData = await channelResponse.json();
 
+    // Check for YouTube API errors
+    if (channelData.error) {
+      console.error('YouTube API error:', channelData.error);
+      return res.status(500).json({
+        error: 'YouTube API error',
+        details: channelData.error.message,
+        reason: channelData.error.errors?.[0]?.reason
+      });
+    }
+
     if (!channelData.items || channelData.items.length === 0) {
       return res.status(404).json({ error: 'Channel not found' });
     }
@@ -51,6 +61,16 @@ app.get('/api/channel/:channelId/shorts', async (req, res) => {
     );
     const playlistData = await playlistResponse.json();
 
+    // Check for YouTube API errors
+    if (playlistData.error) {
+      console.error('YouTube API error (playlist):', playlistData.error);
+      return res.status(500).json({
+        error: 'YouTube API error',
+        details: playlistData.error.message,
+        reason: playlistData.error.errors?.[0]?.reason
+      });
+    }
+
     if (!playlistData.items) {
       return res.json({ shorts: [] });
     }
@@ -62,6 +82,16 @@ app.get('/api/channel/:channelId/shorts', async (req, res) => {
       `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`
     );
     const videosData = await videosResponse.json();
+
+    // Check for YouTube API errors
+    if (videosData.error) {
+      console.error('YouTube API error (videos):', videosData.error);
+      return res.status(500).json({
+        error: 'YouTube API error',
+        details: videosData.error.message,
+        reason: videosData.error.errors?.[0]?.reason
+      });
+    }
 
     // Filter for shorts (videos under 60 seconds)
     const shorts = videosData.items.filter(video => {
