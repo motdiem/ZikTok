@@ -685,21 +685,239 @@ pm2 startup  # Follow instructions
 # Setup nginx reverse proxy (optional)
 ```
 
-### Option 5: Docker
+### Option 5: Docker (Recommended for Production)
 
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --production
-COPY . .
-EXPOSE 3000
-CMD ["node", "server.js"]
+Docker provides the easiest and most consistent deployment experience. The application uses **node:18-alpine**, the lightest official Node.js image (~40MB base).
+
+#### Quick Start with Docker Compose
+
+**Prerequisites**: Docker and Docker Compose installed
+
+1. **Create .env file** in project root:
+```bash
+YOUTUBE_API_KEY=your_youtube_api_key_here
 ```
 
+2. **Start the application**:
 ```bash
-docker build -t ziktok .
-docker run -p 3000:3000 -e YOUTUBE_API_KEY=your_key ziktok
+docker-compose up -d
+```
+
+3. **Access the app**: Open http://localhost:3000
+
+4. **View logs**:
+```bash
+docker-compose logs -f ziktok
+```
+
+5. **Stop the application**:
+```bash
+docker-compose down
+```
+
+#### Manual Docker Build
+
+If you prefer not to use Docker Compose:
+
+```bash
+# Build the image
+docker build -t ziktok:latest .
+
+# Run the container
+docker run -d \
+  --name ziktok \
+  -p 3000:3000 \
+  -e YOUTUBE_API_KEY=your_youtube_api_key_here \
+  --restart unless-stopped \
+  ziktok:latest
+
+# View logs
+docker logs -f ziktok
+
+# Stop the container
+docker stop ziktok
+docker rm ziktok
+```
+
+#### Docker Image Features
+
+- **Base Image**: `node:18-alpine` (~180MB final size)
+- **Non-root user**: Runs as user `nodejs` for security
+- **Health checks**: Automatic container health monitoring
+- **Production optimized**: Only production dependencies installed
+- **Resource limits**: Default 256MB RAM, 0.5 CPU (configurable)
+- **Auto-restart**: Container restarts on failure
+
+#### Advanced Configuration
+
+**Custom port mapping**:
+```bash
+docker run -d -p 8080:3000 -e PORT=3000 -e YOUTUBE_API_KEY=your_key ziktok:latest
+# Access on http://localhost:8080
+```
+
+**Resource limits**:
+```bash
+docker run -d \
+  --memory="512m" \
+  --cpus="1.0" \
+  -p 3000:3000 \
+  -e YOUTUBE_API_KEY=your_key \
+  ziktok:latest
+```
+
+**With persistent data** (for future features):
+```bash
+docker run -d \
+  -p 3000:3000 \
+  -v $(pwd)/data:/app/data \
+  -e YOUTUBE_API_KEY=your_key \
+  ziktok:latest
+```
+
+#### Docker Compose Configuration
+
+The `docker-compose.yml` file includes:
+- Automatic health checks
+- Resource limits (256MB RAM, 0.5 CPU)
+- Auto-restart policy
+- Log rotation (10MB max, 3 files)
+- Environment variable injection
+
+**Modify docker-compose.yml** to change settings:
+```yaml
+# Change port
+ports:
+  - "8080:3000"
+
+# Adjust resources
+deploy:
+  resources:
+    limits:
+      memory: 512M
+      cpus: '1.0'
+```
+
+#### Deployment to Cloud Platforms
+
+**Deploy to Docker-enabled VPS**:
+```bash
+# Copy files to server
+scp -r . user@your-server:/path/to/ziktok
+
+# SSH into server
+ssh user@your-server
+
+# Navigate and start
+cd /path/to/ziktok
+docker-compose up -d
+```
+
+**Deploy to AWS ECS/Fargate**:
+```bash
+# Build and tag
+docker build -t ziktok:latest .
+docker tag ziktok:latest your-account.dkr.ecr.region.amazonaws.com/ziktok:latest
+
+# Push to ECR
+aws ecr get-login-password --region region | docker login --username AWS --password-stdin your-account.dkr.ecr.region.amazonaws.com
+docker push your-account.dkr.ecr.region.amazonaws.com/ziktok:latest
+
+# Deploy using ECS task definition
+```
+
+**Deploy to Google Cloud Run**:
+```bash
+# Build and submit
+gcloud builds submit --tag gcr.io/PROJECT-ID/ziktok
+
+# Deploy
+gcloud run deploy ziktok \
+  --image gcr.io/PROJECT-ID/ziktok \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars YOUTUBE_API_KEY=your_key
+```
+
+**Deploy to Azure Container Instances**:
+```bash
+# Build and push to ACR
+az acr build --registry your-registry --image ziktok:latest .
+
+# Deploy
+az container create \
+  --resource-group your-rg \
+  --name ziktok \
+  --image your-registry.azurecr.io/ziktok:latest \
+  --dns-name-label ziktok \
+  --ports 3000 \
+  --environment-variables YOUTUBE_API_KEY=your_key
+```
+
+#### Docker Healthcheck
+
+The container includes a built-in healthcheck that:
+- Runs every 30 seconds
+- Checks if the server responds on port 3000
+- Marks container unhealthy after 3 failed attempts
+- Allows 5 seconds startup time
+
+View health status:
+```bash
+docker ps  # See health status in STATUS column
+docker inspect ziktok | grep -A 10 Health
+```
+
+#### Dockerfile Optimization
+
+The included Dockerfile follows best practices:
+1. **Multi-layer caching**: Package.json copied first for better cache utilization
+2. **Minimal dependencies**: `npm ci --only=production` installs only required packages
+3. **Cache cleanup**: `npm cache clean --force` reduces image size
+4. **Non-root execution**: Security best practice
+5. **Explicit port exposure**: Documents container networking
+6. **Health monitoring**: Automatic health status reporting
+
+#### Troubleshooting Docker Deployment
+
+**Container won't start**:
+```bash
+# Check logs
+docker logs ziktok
+
+# Check if port is already in use
+lsof -i :3000  # macOS/Linux
+netstat -ano | findstr :3000  # Windows
+```
+
+**Can't connect to container**:
+```bash
+# Verify container is running
+docker ps
+
+# Check port mapping
+docker port ziktok
+
+# Test from inside container
+docker exec -it ziktok sh
+wget -O- http://localhost:3000
+```
+
+**Image too large**:
+```bash
+# Check image size
+docker images ziktok
+
+# Should be ~180MB. If larger, check .dockerignore
+```
+
+**Out of memory errors**:
+```bash
+# Increase memory limit
+docker update --memory="512m" ziktok
+
+# Or in docker-compose.yml
 ```
 
 ## Troubleshooting
