@@ -11,6 +11,7 @@ class ZikTok {
     this.isMuted = false;
     this.players = {}; // YouTube player instances
     this.isLoadingVideos = false;
+    this.currentVideoPlaying = true; // Track play state
 
     // Touch handling
     this.touchStartY = 0;
@@ -44,10 +45,10 @@ class ZikTok {
 
     // Load default channels if none exist
     if (this.channels.length === 0) {
-      this.channels = [
-        { id: 'UCOJhfNGIDalQNUGAJyJZ5KA', title: 'Dropout', thumbnail: '' },
-      ];
-      this.saveChannels();
+      // First run - show settings modal
+      this.hideLoading();
+      this.openSettings();
+      return; // Don't try to load videos yet
     }
 
     // Load videos
@@ -75,6 +76,10 @@ class ZikTok {
       if (e.key === 'Enter') this.searchChannels();
     });
 
+    // Import/Export
+    document.getElementById('export-settings-btn').addEventListener('click', () => this.exportSettings());
+    document.getElementById('import-settings-btn').addEventListener('click', () => this.importSettings());
+
     // Video controls
     document.getElementById('mute-btn').addEventListener('click', () => this.toggleMute());
     document.getElementById('share-btn').addEventListener('click', () => this.shareVideo());
@@ -86,9 +91,22 @@ class ZikTok {
 
     // Keyboard navigation (for desktop)
     document.addEventListener('keydown', (e) => {
+      // Don't intercept if typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault(); // Prevent page scrolling
+      }
+
       if (e.key === 'ArrowUp') this.previousVideo();
       if (e.key === 'ArrowDown') this.nextVideo();
+      if (e.key === 'ArrowLeft') this.previousVideo();
+      if (e.key === 'ArrowRight') this.nextVideo();
       if (e.key === 'm' || e.key === 'M') this.toggleMute();
+      if (e.key === ' ') {
+        e.preventDefault();
+        this.togglePlayPause();
+      }
     });
 
     // Close modal on outside click
@@ -220,9 +238,10 @@ class ZikTok {
     // Create YouTube iframe
     const iframe = document.createElement('iframe');
     const videoId = video.id;
-    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${position === 1 ? 1 : 0}&mute=${this.isMuted ? 1 : 0}&controls=0&modestbranding=1&rel=0&cc_load_policy=1`;
+    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${this.isMuted ? 1 : 0}&controls=0&modestbranding=1&rel=0&cc_load_policy=1&playsinline=1&loop=1&playlist=${videoId}`;
     iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     iframe.allowFullscreen = true;
+    iframe.setAttribute('playsinline', '');
     iframe.id = `player-${videoIndex}`;
 
     slide.appendChild(iframe);
@@ -318,6 +337,7 @@ class ZikTok {
 
     // Play current video
     this.playVideo(this.currentIndex);
+    this.currentVideoPlaying = true;
   }
 
   playVideo(index) {
@@ -331,6 +351,16 @@ class ZikTok {
     const iframe = this.players[index];
     if (iframe && iframe.contentWindow) {
       iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+    }
+  }
+
+  togglePlayPause() {
+    if (!this.currentVideoPlaying) {
+      this.playVideo(this.currentIndex);
+      this.currentVideoPlaying = true;
+    } else {
+      this.pauseVideo(this.currentIndex);
+      this.currentVideoPlaying = false;
     }
   }
 
@@ -585,6 +615,76 @@ class ZikTok {
   hideSwipeHint() {
     this.swipeHint.classList.add('hidden');
     localStorage.setItem('ziktok_seen_hint', 'true');
+  }
+
+  // ===== Import/Export Settings =====
+
+  exportSettings() {
+    const settings = {
+      channels: this.channels,
+      sortMode: this.sortMode,
+      isMuted: this.isMuted,
+      version: '1.0'
+    };
+
+    const json = JSON.stringify(settings, null, 2);
+    const textarea = document.getElementById('settings-json');
+    textarea.value = json;
+    textarea.select();
+
+    // Try to copy to clipboard
+    try {
+      document.execCommand('copy');
+      alert('Settings exported and copied to clipboard!');
+    } catch (err) {
+      alert('Settings exported! Copy the JSON from the textarea.');
+    }
+  }
+
+  importSettings() {
+    const textarea = document.getElementById('settings-json');
+    const json = textarea.value.trim();
+
+    if (!json) {
+      alert('Please paste your settings JSON in the textarea first.');
+      return;
+    }
+
+    try {
+      const settings = JSON.parse(json);
+
+      // Validate settings
+      if (!settings.channels || !Array.isArray(settings.channels)) {
+        throw new Error('Invalid settings format: missing or invalid channels array');
+      }
+
+      // Import channels
+      this.channels = settings.channels;
+      this.saveChannels();
+
+      // Import other settings
+      if (settings.sortMode) {
+        this.sortMode = settings.sortMode;
+      }
+      if (typeof settings.isMuted === 'boolean') {
+        this.isMuted = settings.isMuted;
+      }
+
+      // Update UI
+      this.renderChannelList();
+      textarea.value = '';
+
+      alert(`Successfully imported ${this.channels.length} channel(s)!`);
+
+      // Reload videos if we're not on first run
+      if (this.channels.length > 0) {
+        this.closeSettings();
+        this.loadAllVideos();
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Failed to import settings. Please check the JSON format.\n\nError: ' + error.message);
+    }
   }
 }
 

@@ -446,6 +446,64 @@ iframe {
   background: rgba(255, 0, 0, 1);
 }
 
+/* Import/Export Settings */
+.import-export {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.import-export button {
+  padding: 12px 20px;
+  border-radius: 25px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.export-btn {
+  background: rgba(100, 200, 100, 0.8);
+  color: #fff;
+}
+
+.export-btn:hover {
+  background: rgba(100, 200, 100, 1);
+}
+
+.import-btn {
+  background: rgba(100, 150, 255, 0.8);
+  color: #fff;
+}
+
+.import-btn:hover {
+  background: rgba(100, 150, 255, 1);
+}
+
+#settings-json {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  resize: vertical;
+  outline: none;
+}
+
+#settings-json::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+#settings-json:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 /* Swipe Hint */
 .swipe-hint {
   position: fixed;
