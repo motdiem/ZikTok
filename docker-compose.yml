@@ -16,13 +16,19 @@ services:
     # Uncomment for persistent data (if you add features that need it)
     # volumes:
     #   - ./data:/app/data
+    # Synology NAS users: Use this path instead
+    #   - /volume1/docker/ziktok/data:/app/data
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 5s
-    # Resource limits (adjust based on your needs)
+    # Resource limits (Synology Container Manager: use mem_limit and cpus instead of deploy section)
+    # For Synology, uncomment these:
+    # mem_limit: 256m
+    # cpus: 0.5
+    # For Docker Swarm/standard Docker Compose, use deploy section:
     deploy:
       resources:
         limits:

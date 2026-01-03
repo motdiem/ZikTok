@@ -53,6 +53,44 @@ docker-compose up -d --build
 
 ---
 
+## 🏠 Synology NAS (Container Manager)
+
+**Perfect for home servers and NAS users**
+
+See detailed guide: **[SYNOLOGY.md](SYNOLOGY.md)**
+
+### Quick Start
+
+1. **Upload files to NAS**
+   - File Station → `/docker/ziktok/`
+   - Upload all project files
+
+2. **Create .env file**
+   - Right-click → Create → Text File
+   - Name: `.env`
+   - Content: `YOUTUBE_API_KEY=your_key_here`
+
+3. **Deploy via Container Manager**
+   - Container Manager → Project → Create
+   - Path: `/docker/ziktok`
+   - Use existing docker-compose.yml
+   - Start project
+
+4. **Access the app**
+   ```
+   http://nas-ip:3000
+   ```
+
+### Common Issues
+
+- **Port conflict**: Change port in docker-compose.yml (e.g., 8080:3000)
+- **Permissions**: Run with sudo via SSH: `sudo docker-compose up -d`
+- **Resource limits**: Edit container → Resource Limitation → 256MB RAM
+
+📖 **Full Synology Guide**: [SYNOLOGY.md](SYNOLOGY.md) covers GUI + CLI methods, troubleshooting, reverse proxy setup, and more.
+
+---
+
 ## 🌐 Cloud Platforms
 
 ### Vercel (Serverless)
