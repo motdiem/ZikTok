@@ -18,12 +18,13 @@ app.use(express.static('public'));
 app.get('/api/channel/:channelId/shorts', async (req, res) => {
   try {
     const { channelId } = req.params;
-    const cacheKey = `channel_${channelId}`;
+    const maxResults = Math.min(parseInt(req.query.maxResults) || 50, 50); // Default 50, max 50 (YouTube API limit)
+    const cacheKey = `channel_${channelId}_${maxResults}`;
 
     // Check cache first
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log(`Cache hit for channel: ${channelId}`);
+      console.log(`Cache hit for channel: ${channelId} (max: ${maxResults})`);
       return res.json(cached.data);
     }
 
@@ -31,7 +32,7 @@ app.get('/api/channel/:channelId/shorts', async (req, res) => {
       return res.status(500).json({ error: 'YouTube API key not configured' });
     }
 
-    console.log(`Fetching shorts for channel: ${channelId}`);
+    console.log(`Fetching shorts for channel: ${channelId} (max: ${maxResults})`);
 
     // Step 1: Get channel's uploads playlist ID and info
     const channelResponse = await fetch(
@@ -55,9 +56,9 @@ app.get('/api/channel/:channelId/shorts', async (req, res) => {
 
     const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
 
-    // Step 2: Get recent videos from uploads playlist (max 50)
+    // Step 2: Get recent videos from uploads playlist
     const playlistResponse = await fetch(
-      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${YOUTUBE_API_KEY}`
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=${maxResults}&key=${YOUTUBE_API_KEY}`
     );
     const playlistData = await playlistResponse.json();
 

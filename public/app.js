@@ -166,7 +166,13 @@ class ZikTok {
     this.videos = [];
 
     try {
-      const promises = this.channels.map(channel => this.fetchChannelShorts(channel.id));
+      // Calculate balanced videos per channel (aiming for ~100 total)
+      const targetTotal = 100;
+      const videosPerChannel = Math.max(Math.floor(targetTotal / this.channels.length), 10);
+
+      console.log(`Fetching ${videosPerChannel} videos from each of ${this.channels.length} channels (target: ~${targetTotal} total)`);
+
+      const promises = this.channels.map(channel => this.fetchChannelShorts(channel.id, videosPerChannel));
       const results = await Promise.all(promises);
 
       results.forEach(result => {
@@ -177,6 +183,7 @@ class ZikTok {
 
       // Filter out videos watched in last 24 hours
       this.videos = this.filterUnwatchedVideos(this.videos);
+      console.log(`Loaded ${this.videos.length} total shorts from ${this.channels.length} channels`);
 
       if (this.videos.length === 0) {
         alert('No unwatched shorts found. All videos have been watched in the last 24 hours. Check history to rewatch or wait for new content.');
@@ -199,9 +206,9 @@ class ZikTok {
     }
   }
 
-  async fetchChannelShorts(channelId) {
+  async fetchChannelShorts(channelId, maxResults = 50) {
     try {
-      const response = await fetch(`/api/channel/${channelId}/shorts`);
+      const response = await fetch(`/api/channel/${channelId}/shorts?maxResults=${maxResults}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMsg = errorData.details || errorData.error || `HTTP ${response.status}`;
