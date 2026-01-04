@@ -24,10 +24,16 @@ class ZikTok {
     // Video navigation tracking (for swipe hint)
     this.videoChanges = 0;
 
+    // Watch history tracking
+    this.watchHistory = this.loadWatchHistory();
+    this.currentVideoStartTime = null;
+    this.currentVideoWatchTime = 0;
+
     // DOM Elements
     this.videoContainer = document.getElementById('video-container');
     this.loadingScreen = document.getElementById('loading-screen');
     this.settingsModal = document.getElementById('settings-modal');
+    this.historyModal = null; // Will be set after DOM loads
     this.swipeHint = document.getElementById('swipe-hint');
 
     // Initialize
@@ -45,8 +51,14 @@ class ZikTok {
       }
     }
 
+    // Get history modal reference after DOM loads
+    this.historyModal = document.getElementById('history-modal');
+
     // Setup event listeners
     this.setupEventListeners();
+
+    // Clean up old watch history (older than 24 hours)
+    this.cleanupWatchHistory();
 
     // Load default channels if none exist
     if (this.channels.length === 0) {
@@ -77,6 +89,10 @@ class ZikTok {
     // Settings
     document.getElementById('settings-btn').addEventListener('click', () => this.openSettings());
     document.getElementById('close-modal').addEventListener('click', () => this.closeSettings());
+
+    // History
+    document.getElementById('history-btn').addEventListener('click', () => this.openHistory());
+    document.getElementById('close-history-modal').addEventListener('click', () => this.closeHistory());
 
     // Channel search
     document.getElementById('search-channel-btn').addEventListener('click', () => this.searchChannels());
@@ -117,9 +133,26 @@ class ZikTok {
       }
     });
 
-    // Close modal on outside click
+    // Close modals on outside click
     this.settingsModal.addEventListener('click', (e) => {
       if (e.target === this.settingsModal) this.closeSettings();
+    });
+
+    if (this.historyModal) {
+      this.historyModal.addEventListener('click', (e) => {
+        if (e.target === this.historyModal) this.closeHistory();
+      });
+    }
+
+    // Save watch time when page becomes hidden or before unload
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        this.saveCurrentVideoWatchTime();
+      }
+    });
+
+    window.addEventListener('beforeunload', () => {
+      this.saveCurrentVideoWatchTime();
     });
   }
 
@@ -142,8 +175,11 @@ class ZikTok {
         }
       });
 
+      // Filter out videos watched in last 24 hours
+      this.videos = this.filterUnwatchedVideos(this.videos);
+
       if (this.videos.length === 0) {
-        alert('No shorts found. Please add channels in settings.');
+        alert('No unwatched shorts found. All videos have been watched in the last 24 hours. Check history to rewatch or wait for new content.');
         this.openSettings();
         return;
       }
@@ -349,6 +385,9 @@ class ZikTok {
   }
 
   playCurrentVideo() {
+    // Save watch time for previous video
+    this.saveCurrentVideoWatchTime();
+
     // Pause all other videos
     Object.keys(this.players).forEach(index => {
       if (parseInt(index) !== this.currentIndex) {
@@ -359,6 +398,9 @@ class ZikTok {
     // Play current video
     this.playVideo(this.currentIndex);
     this.currentVideoPlaying = true;
+
+    // Start tracking watch time for new video
+    this.startWatchTimeTracking();
   }
 
   playVideo(index) {
@@ -726,6 +768,199 @@ class ZikTok {
       console.error('Import error:', error);
       alert('Failed to import settings. Please check the JSON format.\n\nError: ' + error.message);
     }
+  }
+
+  // ===== Watch History Management =====
+
+  loadWatchHistory() {
+    try {
+      const stored = localStorage.getItem('ziktok_watch_history');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Error loading watch history:', error);
+      return [];
+    }
+  }
+
+  saveWatchHistory() {
+    try {
+      localStorage.setItem('ziktok_watch_history', JSON.stringify(this.watchHistory));
+    } catch (error) {
+      console.error('Error saving watch history:', error);
+    }
+  }
+
+  cleanupWatchHistory() {
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    this.watchHistory = this.watchHistory.filter(entry => {
+      return (now - entry.timestamp) < twentyFourHours;
+    });
+
+    this.saveWatchHistory();
+  }
+
+  filterUnwatchedVideos(videos) {
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    return videos.filter(video => {
+      const watchEntry = this.watchHistory.find(entry => entry.videoId === video.id);
+
+      // Include video if not watched, or watched more than 24 hours ago, or watched less than 2 seconds
+      if (!watchEntry) return true;
+      if ((now - watchEntry.timestamp) >= twentyFourHours) return true;
+      if (watchEntry.watchTime < 2) return true;
+
+      return false;
+    });
+  }
+
+  startWatchTimeTracking() {
+    const video = this.videos[this.currentIndex];
+    if (!video) return;
+
+    this.currentVideoStartTime = Date.now();
+    this.currentVideoWatchTime = 0;
+
+    // Get existing watch time if video was partially watched before
+    const existingEntry = this.watchHistory.find(entry => entry.videoId === video.id);
+    if (existingEntry) {
+      this.currentVideoWatchTime = existingEntry.watchTime || 0;
+    }
+  }
+
+  saveCurrentVideoWatchTime() {
+    if (!this.currentVideoStartTime) return;
+
+    const video = this.videos[this.currentIndex];
+    if (!video) return;
+
+    const watchDuration = (Date.now() - this.currentVideoStartTime) / 1000; // Convert to seconds
+    this.currentVideoWatchTime += watchDuration;
+
+    // Update or add watch history entry
+    const existingIndex = this.watchHistory.findIndex(entry => entry.videoId === video.id);
+
+    const watchEntry = {
+      videoId: video.id,
+      title: video.title,
+      channelTitle: video.channelTitle,
+      thumbnail: video.thumbnail,
+      timestamp: Date.now(),
+      watchTime: this.currentVideoWatchTime
+    };
+
+    if (existingIndex >= 0) {
+      this.watchHistory[existingIndex] = watchEntry;
+    } else {
+      this.watchHistory.push(watchEntry);
+    }
+
+    this.saveWatchHistory();
+    this.currentVideoStartTime = null;
+  }
+
+  // ===== History Modal =====
+
+  openHistory() {
+    if (!this.historyModal) return;
+
+    this.historyModal.classList.add('show');
+    this.renderHistoryList();
+    this.pauseVideo(this.currentIndex);
+  }
+
+  closeHistory() {
+    if (!this.historyModal) return;
+
+    this.historyModal.classList.remove('show');
+    this.playCurrentVideo();
+  }
+
+  renderHistoryList() {
+    const historyList = document.getElementById('history-list');
+    if (!historyList) return;
+
+    historyList.innerHTML = '';
+
+    // Filter videos watched for more than 2 seconds and sort by timestamp (most recent first)
+    const watchedVideos = this.watchHistory
+      .filter(entry => entry.watchTime >= 2)
+      .sort((a, b) => b.timestamp - a.timestamp);
+
+    if (watchedVideos.length === 0) {
+      historyList.innerHTML = '<p style="color: rgba(255,255,255,0.5); text-align: center; padding: 20px;">No watch history yet. Videos you watch for more than 2 seconds will appear here.</p>';
+      return;
+    }
+
+    watchedVideos.forEach(entry => {
+      const item = this.createHistoryItem(entry);
+      historyList.appendChild(item);
+    });
+  }
+
+  createHistoryItem(entry) {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+
+    const thumbnail = entry.thumbnail || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="120" height="90"%3E%3Crect fill="%23333" width="120" height="90"/%3E%3C/svg%3E';
+
+    const timeAgo = this.getTimeAgo(entry.timestamp);
+    const watchTimeFormatted = Math.floor(entry.watchTime) + 's';
+
+    item.innerHTML = `
+      <img src="${thumbnail}" alt="${entry.title}">
+      <div class="history-item-info">
+        <h4>${entry.title}</h4>
+        <p>${entry.channelTitle}</p>
+        <p class="history-meta">Watched ${timeAgo} • ${watchTimeFormatted}</p>
+      </div>
+      <button class="rewatch-btn">Watch</button>
+    `;
+
+    const button = item.querySelector('.rewatch-btn');
+    button.addEventListener('click', () => {
+      this.rewatchVideo(entry.videoId);
+    });
+
+    return item;
+  }
+
+  async rewatchVideo(videoId) {
+    // Find the video in current videos or reload it
+    let videoIndex = this.videos.findIndex(v => v.id === videoId);
+
+    if (videoIndex === -1) {
+      // Video not in current list, we need to temporarily add it
+      const historyEntry = this.watchHistory.find(entry => entry.videoId === videoId);
+      if (historyEntry) {
+        // Add video to the list
+        this.videos.push({
+          id: historyEntry.videoId,
+          title: historyEntry.title,
+          channelTitle: historyEntry.channelTitle,
+          thumbnail: historyEntry.thumbnail
+        });
+        videoIndex = this.videos.length - 1;
+      }
+    }
+
+    if (videoIndex !== -1) {
+      this.closeHistory();
+      this.currentIndex = videoIndex;
+      this.createVideoSlides();
+    }
+  }
+
+  getTimeAgo(timestamp) {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+    return Math.floor(seconds / 86400) + 'd ago';
   }
 }
 

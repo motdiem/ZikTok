@@ -35,6 +35,12 @@
 
   <!-- Top Bar -->
   <div class="top-bar">
+    <button id="history-btn" class="icon-btn" title="Watch History">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+    </button>
     <button id="settings-btn" class="icon-btn" title="Settings">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="3"></circle>
@@ -108,6 +114,22 @@
           <button id="export-settings-btn" class="export-btn">Export Settings</button>
           <button id="import-settings-btn" class="import-btn">Import Settings</button>
           <textarea id="settings-json" placeholder="Paste settings JSON here to import..." rows="5"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="history-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Watch History</h2>
+        <button id="close-history-modal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: rgba(255,255,255,0.7); margin-bottom: 15px; font-size: 14px;">Videos watched for more than 2 seconds in the last 24 hours</p>
+        <div id="history-list" class="history-list">
+          <!-- History items will be listed here -->
         </div>
       </div>
     </div>
