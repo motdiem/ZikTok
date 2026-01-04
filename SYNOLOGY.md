@@ -2,6 +2,8 @@
 
 Complete guide for deploying ZikTok on your Synology NAS using Container Manager.
 
+> **⚡ NEW - Fast Updates!** After initial deployment, you can update ZikTok in ~10 seconds without rebuilding! See [Updating the Application](#updating-the-application) or check [QUICK_UPDATE.md](QUICK_UPDATE.md) for details.
+
 ## Prerequisites
 
 - Synology NAS with DSM 7.0 or higher
@@ -336,10 +338,67 @@ sudo docker exec -it ziktok sh
 
 ## Updating the Application
 
-### 🚀 Method 1: Easy Update Script (Recommended)
+> **⚡ NEW:** Fast update system with volume mounts! See **Method 1** below for 10-second updates.
 
-We've created a simple script that handles everything automatically:
+### ⚡ Method 1: Fast Update (HTTP Endpoint) - **FASTEST** ⭐
 
+**Update in ~10 seconds without rebuilding!**
+
+This method uses volume mounts and an HTTP endpoint for instant updates.
+
+#### One-Time Setup
+
+1. **Generate an update token:**
+```bash
+ssh admin@your-nas-ip
+cd /volume1/docker/ziktok
+openssl rand -hex 32  # Copy this token
+```
+
+2. **Add token to .env file:**
+```bash
+echo "UPDATE_TOKEN=paste_your_token_here" >> .env
+```
+
+3. **Recreate container with volume mounts (one time only):**
+```bash
+docker-compose down
+docker rmi ziktok-ziktok
+docker-compose up -d --build
+```
+
+#### To Update
+
+**Option A: From any browser or device** (easiest)
+```
+http://your-nas-ip:3000/update?token=YOUR_UPDATE_TOKEN
+```
+
+**Option B: Using curl**
+```bash
+curl "http://your-nas-ip:3000/update?token=YOUR_UPDATE_TOKEN"
+```
+
+**Option C: Manual (SSH)**
+```bash
+cd /volume1/docker/ziktok
+git pull
+docker-compose restart
+```
+
+**Result:** Server updates and restarts in ~10 seconds! 🚀
+
+**Note:** Only use Method 2 (below) if you've changed `package.json` (added/removed dependencies) or modified the `Dockerfile`.
+
+See [QUICK_UPDATE.md](QUICK_UPDATE.md) for detailed instructions.
+
+---
+
+### 🔧 Method 2: Full Rebuild (For Dependency Changes)
+
+Use this method when you've changed `package.json` or the `Dockerfile`.
+
+**Option A: Using the update script** (easiest)
 ```bash
 cd /volume1/docker/ziktok
 ./update-synology.sh
@@ -355,7 +414,7 @@ This script will:
 
 **Why remove the image?** Just stopping/deleting the container keeps the old code cached in the image. Removing the image forces Docker to rebuild with your updated files.
 
-### Method 2: Manual Update via Command Line
+**Option B: Manual rebuild via Command Line**
 
 ```bash
 cd /volume1/docker/ziktok
@@ -376,7 +435,7 @@ sudo docker-compose up -d --build
 sudo docker-compose logs -f
 ```
 
-### Method 3: Container Manager GUI
+**Option C: Container Manager GUI**
 
 **Important:** Just deleting the container won't update the code! You need to delete the project or image.
 

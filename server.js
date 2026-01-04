@@ -2,10 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const fetch = require('node-fetch');
 const path = require('path');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+
+const execAsync = promisify(exec);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+const UPDATE_TOKEN = process.env.UPDATE_TOKEN;
 
 // Simple in-memory cache to reduce API calls
 const cache = new Map();
@@ -148,6 +153,66 @@ app.get('/api/channel/search/:query', async (req, res) => {
   } catch (error) {
     console.error('Error searching channels:', error);
     res.status(500).json({ error: 'Failed to search channels', message: error.message });
+  }
+});
+
+// Update endpoint - pulls latest code from git and restarts the server
+app.get('/update', async (req, res) => {
+  try {
+    // Verify authentication token
+    const { token } = req.query;
+
+    if (!UPDATE_TOKEN) {
+      return res.status(500).json({
+        error: 'Update endpoint not configured',
+        message: 'UPDATE_TOKEN environment variable is not set'
+      });
+    }
+
+    if (token !== UPDATE_TOKEN) {
+      console.warn('⚠️  Unauthorized update attempt');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    console.log('🔄 Update requested - pulling latest code...');
+
+    // Execute git pull
+    const { stdout, stderr } = await execAsync('git pull', { cwd: '/app' });
+
+    console.log('Git pull output:', stdout);
+    if (stderr) console.log('Git pull stderr:', stderr);
+
+    // Check if there were any updates
+    const isUpToDate = stdout.includes('Already up to date') || stdout.includes('Already up-to-date');
+
+    if (isUpToDate) {
+      return res.json({
+        success: true,
+        message: 'Already up to date',
+        output: stdout
+      });
+    }
+
+    // Send success response before restarting
+    res.json({
+      success: true,
+      message: 'Code updated successfully. Server restarting...',
+      output: stdout
+    });
+
+    // Give the response time to be sent, then restart
+    setTimeout(() => {
+      console.log('🔄 Restarting server to apply updates...');
+      process.exit(0); // Docker will restart the container
+    }, 500);
+
+  } catch (error) {
+    console.error('Error updating:', error);
+    res.status(500).json({
+      error: 'Update failed',
+      message: error.message,
+      details: error.stderr || error.stdout
+    });
   }
 });
 

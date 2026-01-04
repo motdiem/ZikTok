@@ -13,11 +13,18 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
-    # Uncomment for persistent data (if you add features that need it)
-    # volumes:
-    #   - ./data:/app/data
-    # Synology NAS users: Use this path instead
-    #   - /volume1/docker/ziktok/data:/app/data
+      - UPDATE_TOKEN=${UPDATE_TOKEN}
+    # Volume mounts for fast updates without rebuilding
+    # This allows you to git pull and restart without rebuilding the image
+    volumes:
+      # Mount source code (enables hot updates)
+      - ./server.js:/app/server.js:ro
+      - ./public:/app/public:ro
+      # Keep node_modules as a named volume (don't overwrite with host)
+      - node_modules:/app/node_modules
+      # Synology NAS users: Use absolute paths instead
+      # - /volume1/docker/ziktok/server.js:/app/server.js:ro
+      # - /volume1/docker/ziktok/public:/app/public:ro
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
@@ -43,3 +50,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+# Named volumes
+volumes:
+  node_modules:

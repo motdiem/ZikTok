@@ -642,6 +642,7 @@ Key CSS variables and values in `style.css`:
 **Quick Start Guides:**
 - 🐳 **Docker/General**: See [DEPLOYMENT.md](DEPLOYMENT.md) for quick reference
 - 🏠 **Synology NAS**: See [SYNOLOGY.md](SYNOLOGY.md) for Container Manager setup
+  - ⚡ **NEW**: 10-second updates without rebuilding! See [QUICK_UPDATE.md](QUICK_UPDATE.md)
 - 📖 **Detailed options**: Continue reading below
 
 ### Option 1: Vercel (Recommended for Serverless)
