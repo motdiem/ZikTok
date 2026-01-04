@@ -24,6 +24,7 @@ A vanilla JavaScript Progressive Web App (PWA) that provides a TikTok-style inte
 
 - 📱 **TikTok-style vertical video interface** - Swipe up/down to navigate
 - 🎥 **YouTube Shorts integration** - Pulls shorts from your favorite channels
+- ⚖️ **Balanced video fetching** - Distributes ~100 videos evenly across channels
 - 🔀 **Multiple sort modes** - Sort by date or random shuffle
 - 🔇 **Mute control** - Toggle audio on/off
 - 📤 **Share functionality** - Share videos directly from the app
@@ -169,8 +170,10 @@ Open your browser and navigate to `http://localhost:3000`
    - Fetches videos from all channels
 
 2. **Video Loading** (`app.js:loadAllVideos()`)
+   - Calculates balanced video distribution (target: ~100 total videos)
+   - Videos per channel = 100 ÷ number of channels (minimum 10 per channel)
    - Iterates through all saved channels
-   - Calls server API to fetch shorts for each channel
+   - Calls server API with maxResults parameter to fetch balanced number of shorts
    - Server fetches from YouTube API and filters for shorts (≤60s)
    - Combines all videos into a single array
    - Sorts videos based on selected mode (date/random)
@@ -369,6 +372,9 @@ Fetches YouTube Shorts from a specific channel.
 
 **Parameters**:
 - `channelId` (path): YouTube channel ID (e.g., `UCOJhfNGIDalQNUGAJyJZ5KA`)
+- `maxResults` (query, optional): Number of videos to fetch (default: 50, max: 50)
+
+**Example**: `/api/channel/UCOJhfNGIDalQNUGAJyJZ5KA/shorts?maxResults=25`
 
 **Response**:
 ```json
@@ -388,7 +394,7 @@ Fetches YouTube Shorts from a specific channel.
 }
 ```
 
-**Caching**: Responses cached for 1 hour
+**Caching**: Responses cached for 1 hour (cache key includes channelId and maxResults)
 
 ### GET /api/channel/search/:query
 
@@ -474,24 +480,27 @@ User opens app
     ↓
 app.js calls loadAllVideos()
     ↓
+Calculate balanced distribution
+(targetTotal = 100, videosPerChannel = 100 ÷ channelCount, min 10)
+    ↓
 For each channel:
     ↓
-    fetch('/api/channel/{id}/shorts')
+    fetch('/api/channel/{id}/shorts?maxResults={videosPerChannel}')
         ↓
         server.js receives request
         ↓
-        Check cache (1 hour TTL)
+        Check cache (1 hour TTL, key includes maxResults)
         ↓
         If not cached:
             ↓
             Call YouTube API (3 steps):
             1. Get channel details
-            2. Get playlist items
+            2. Get playlist items (with maxResults)
             3. Get video details + filter by duration
         ↓
         Return shorts array
     ↓
-Combine all shorts
+Combine all shorts (~100 total, balanced across channels)
     ↓
 Sort by date or random
     ↓
@@ -545,7 +554,7 @@ Reload all videos
 In-memory Map with timestamp:
 ```javascript
 cache = {
-  'channel_UCxxx...': {
+  'channel_UCxxx..._50': {  // Key includes channelId and maxResults
     data: { shorts: [...], channelId: '...', channelTitle: '...' },
     timestamp: 1704110400000
   }
@@ -620,13 +629,26 @@ Edit `server.js` line 9:
 const CACHE_DURATION = 60 * 60 * 1000; // Change to desired milliseconds
 ```
 
-### Changing Video Limit Per Channel
+### Changing Total Video Target
 
-Edit `server.js` line 42:
+The app uses a balanced fetch algorithm that targets approximately 100 total videos distributed evenly across all channels.
+
+To change the target total, edit `app.js` around line 122:
 
 ```javascript
-maxResults=50  // Change to 10-50 (YouTube API limit is 50)
+async loadAllVideos() {
+  const targetTotal = 100;  // Change this to your desired total
+  const videosPerChannel = Math.max(Math.floor(targetTotal / this.channels.length), 10);
+  // ...
+}
 ```
+
+**Examples**:
+- 1 channel: fetches 50 videos (API max)
+- 2 channels: fetches 50 videos each (100 total)
+- 4 channels: fetches 25 videos each (100 total)
+- 5 channels: fetches 20 videos each (100 total)
+- 10 channels: fetches 10 videos each (100 total - minimum per channel)
 
 ### Styling Changes
 
