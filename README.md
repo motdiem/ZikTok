@@ -24,6 +24,9 @@ A vanilla JavaScript Progressive Web App (PWA) that provides a TikTok-style inte
 
 - 📱 **TikTok-style vertical video interface** - Swipe up/down to navigate
 - 🎥 **YouTube Shorts integration** - Pulls shorts from your favorite channels
+- 📊 **Watch history tracking** - Automatically tracks videos watched for more than 2 seconds
+- 🚫 **24-hour replay prevention** - Skip videos you've already watched in the last 24 hours
+- 🕐 **Browse watch history** - Quick access to previously watched videos with rewatch option
 - ⚖️ **Balanced video fetching** - Distributes ~100 videos evenly across channels
 - 🔀 **Multiple sort modes** - Sort by date or random shuffle
 - 🔇 **Mute control** - Toggle audio on/off
@@ -165,6 +168,8 @@ Open your browser and navigate to `http://localhost:3000`
 1. **Initialization** (`app.js:init()`)
    - Registers service worker for PWA functionality
    - Loads saved channels from localStorage
+   - Loads watch history from localStorage
+   - Cleans up history entries older than 24 hours
    - Sets up event listeners for UI interactions
    - Loads default channels if none exist
    - Fetches videos from all channels
@@ -176,6 +181,7 @@ Open your browser and navigate to `http://localhost:3000`
    - Calls server API with maxResults parameter to fetch balanced number of shorts
    - Server fetches from YouTube API and filters for shorts (≤60s)
    - Combines all videos into a single array
+   - Filters out videos watched in the last 24 hours (watched > 2 seconds)
    - Sorts videos based on selected mode (date/random)
 
 3. **Video Rendering** (`app.js:createVideoSlides()`)
@@ -248,12 +254,15 @@ if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
 class ZikTok {
   constructor() {
     // State management
-    this.videos = [];           // All loaded shorts
-    this.currentIndex = 0;      // Current video position
-    this.channels = [];         // User's channel list
-    this.sortMode = 'date';     // Sort mode
-    this.isMuted = false;       // Audio state
-    this.players = {};          // YouTube player instances
+    this.videos = [];                    // All loaded shorts
+    this.currentIndex = 0;               // Current video position
+    this.channels = [];                  // User's channel list
+    this.sortMode = 'date';              // Sort mode
+    this.isMuted = false;                // Audio state
+    this.players = {};                   // YouTube player instances
+    this.watchHistory = [];              // Watch history tracking
+    this.currentVideoStartTime = null;   // Watch time tracking
+    this.currentVideoWatchTime = 0;      // Accumulated watch time
   }
 }
 ```
@@ -264,14 +273,22 @@ class ZikTok {
 |--------|---------|
 | `init()` | Initializes app, loads data, sets up listeners |
 | `loadAllVideos()` | Fetches shorts from all channels |
+| `filterUnwatchedVideos()` | Filters out videos watched in last 24 hours |
 | `createVideoSlides()` | Renders video slides in DOM |
 | `nextVideo()/previousVideo()` | Navigation between videos |
 | `handleTouchStart/Move/End()` | Swipe gesture detection |
+| `startWatchTimeTracking()` | Begins tracking watch time for current video |
+| `saveCurrentVideoWatchTime()` | Saves accumulated watch time to history |
 | `toggleMute()` | Controls audio state |
 | `shareVideo()` | Native share or clipboard copy |
 | `openSettings()/closeSettings()` | Settings modal control |
+| `openHistory()/closeHistory()` | Watch history modal control |
+| `renderHistoryList()` | Displays watch history entries |
+| `rewatchVideo()` | Plays a video from watch history |
 | `addChannel()/removeChannel()` | Channel management |
 | `saveChannels()/loadChannels()` | localStorage persistence |
+| `loadWatchHistory()/saveWatchHistory()` | Watch history persistence |
+| `cleanupWatchHistory()` | Removes entries older than 24 hours |
 
 **State Flow**:
 ```
@@ -303,7 +320,7 @@ User swipes → Update index → Reposition slides
     <!-- Dynamically created slides -->
   </div>
 
-  <!-- Top bar (settings, sort buttons) -->
+  <!-- Top bar (history, settings, sort buttons) -->
   <div class="top-bar">...</div>
 
   <!-- Right controls (mute, share) -->
@@ -314,6 +331,9 @@ User swipes → Update index → Reposition slides
 
   <!-- Settings modal -->
   <div id="settings-modal">...</div>
+
+  <!-- Watch history modal -->
+  <div id="history-modal">...</div>
 </body>
 ```
 
@@ -538,6 +558,7 @@ Reload all videos
 | Key | Type | Purpose |
 |-----|------|---------|
 | `ziktok_channels` | JSON array | Stores user's channel list |
+| `ziktok_watch_history` | JSON array | Stores watch history with timestamps and watch times |
 | `ziktok_seen_hint` | Boolean | Whether user has seen swipe hint |
 
 **Channel Object Structure**:
@@ -546,6 +567,18 @@ Reload all videos
   id: "UCxxx...",           // YouTube channel ID
   title: "Channel Name",    // Display name
   thumbnail: "https://..."  // Channel avatar URL
+}
+```
+
+**Watch History Entry Structure**:
+```javascript
+{
+  videoId: "abc123",                    // YouTube video ID
+  title: "Video Title",                 // Video title
+  channelTitle: "Channel Name",         // Channel name
+  thumbnail: "https://...",             // Video thumbnail URL
+  timestamp: 1704110400000,             // Unix timestamp (ms) when watched
+  watchTime: 15.5                       // Total seconds watched
 }
 ```
 
@@ -643,6 +676,22 @@ async loadAllVideos() {
 }
 ```
 
+### Adjusting Watch History Settings
+
+**Change 24-hour period** - Edit `app.js` around line 753:
+```javascript
+const twentyFourHours = 24 * 60 * 60 * 1000;  // Change hours value
+```
+
+**Change minimum watch time** - Edit `app.js` around line 772:
+```javascript
+if (watchEntry.watchTime < 2) return true;  // Change from 2 seconds
+```
+
+**Disable replay prevention** - Edit `app.js` around line 168, comment out:
+```javascript
+// this.videos = this.filterUnwatchedVideos(this.videos);
+```
 **Examples**:
 - 1 channel: fetches 50 videos (API max)
 - 2 channels: fetches 50 videos each (100 total)
