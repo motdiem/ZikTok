@@ -291,7 +291,9 @@ class ZikTok {
     const videoId = video.id;
     // Always mute on mobile to allow autoplay, user can unmute with button
     const shouldMute = this.isMuted || this.isMobileDevice() ? 1 : 0;
-    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=${shouldMute}&controls=0&modestbranding=1&rel=0&cc_load_policy=1&playsinline=1&loop=1&playlist=${videoId}`;
+    // Only autoplay the active video (position 1), not prev/next videos to prevent audio overlap
+    const shouldAutoplay = position === 1 ? 1 : 0;
+    iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldAutoplay}&mute=${shouldMute}&controls=0&modestbranding=1&rel=0&cc_load_policy=1&playsinline=1&loop=1&playlist=${videoId}`;
     iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     iframe.allowFullscreen = true;
     iframe.setAttribute('playsinline', '');
@@ -448,9 +450,9 @@ class ZikTok {
     this.touchEndY = e.touches[0].clientY;
     this.dragDistance = this.touchStartY - this.touchEndY;
 
-    // Visual feedback for drag
+    // Visual feedback for drag - reduced threshold for better responsiveness
     const activeSlide = this.videoContainer.querySelector('.video-slide.active');
-    if (activeSlide && Math.abs(this.dragDistance) > 10) {
+    if (activeSlide && Math.abs(this.dragDistance) > 5) {
       e.preventDefault(); // Prevent scrolling
       const translateY = -this.dragDistance;
       activeSlide.style.transform = `translateY(${translateY}px)`;
@@ -466,12 +468,12 @@ class ZikTok {
       activeSlide.style.transform = '';
     }
 
-    // Threshold for swipe (50px)
-    if (this.dragDistance > 50) {
+    // Reduced threshold for swipe (30px) for better mobile responsiveness, especially on Android
+    if (this.dragDistance > 30) {
       // Swiped up - next video
       this.nextVideo();
       this.hideSwipeHint();
-    } else if (this.dragDistance < -50) {
+    } else if (this.dragDistance < -30) {
       // Swiped down - previous video
       this.previousVideo();
       this.hideSwipeHint();
