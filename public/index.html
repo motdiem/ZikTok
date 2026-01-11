@@ -42,10 +42,10 @@
       </svg>
     </button>
     <button id="settings-btn" class="icon-btn" title="Settings">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"></circle>
-        <path d="M12 1v6m0 6v6m0-6h6m-6 0H6"></path>
-        <path d="M4.2 4.2l4.2 4.2m7.4 0l4.2-4.2m-4.2 11.6l4.2 4.2m-11.6-4.2l-4.2 4.2"></path>
+        <path d="M12 2.69l1.1 2.85 3.04.33-2.34 2.13.76 3-2.56-1.58-2.56 1.58.76-3-2.34-2.13 3.04-.33L12 2.69z" transform="rotate(0 12 12)"></path>
+        <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65z"></path>
       </svg>
     </button>
     <div class="sort-buttons">
@@ -114,6 +114,12 @@
           <button id="export-settings-btn" class="export-btn">Export Settings</button>
           <button id="import-settings-btn" class="import-btn">Import Settings</button>
           <textarea id="settings-json" placeholder="Paste settings JSON here to import..." rows="5"></textarea>
+        </div>
+
+        <h3>Cache Management</h3>
+        <div class="cache-management">
+          <button id="force-refresh-btn" class="force-refresh-btn">🔄 Force Refresh App</button>
+          <p class="help-text">Clear all cached files and reload the app (useful on iOS)</p>
         </div>
       </div>
     </div>

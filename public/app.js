@@ -104,6 +104,9 @@ class ZikTok {
     document.getElementById('export-settings-btn').addEventListener('click', () => this.exportSettings());
     document.getElementById('import-settings-btn').addEventListener('click', () => this.importSettings());
 
+    // Force Refresh
+    document.getElementById('force-refresh-btn').addEventListener('click', () => this.forceRefresh());
+
     // Video controls
     document.getElementById('mute-btn').addEventListener('click', () => this.toggleMute());
     document.getElementById('share-btn').addEventListener('click', () => this.shareVideo());
@@ -776,6 +779,40 @@ class ZikTok {
     } catch (error) {
       console.error('Import error:', error);
       alert('Failed to import settings. Please check the JSON format.\n\nError: ' + error.message);
+    }
+  }
+
+  // ===== Force Refresh =====
+
+  async forceRefresh() {
+    try {
+      // Confirm with user
+      if (!confirm('This will clear all cached files and reload the app. Continue?')) {
+        return;
+      }
+
+      // Clear all caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        console.log('All caches cleared:', cacheNames);
+      }
+
+      // Clear service worker
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(reg => reg.unregister()));
+        console.log('Service workers unregistered');
+      }
+
+      // Add timestamp to force reload all assets
+      const timestamp = Date.now();
+
+      // Reload with cache busting
+      window.location.href = window.location.pathname + '?refresh=' + timestamp;
+    } catch (error) {
+      console.error('Force refresh error:', error);
+      alert('Failed to force refresh. Try manually clearing your browser cache.\n\nError: ' + error.message);
     }
   }
 

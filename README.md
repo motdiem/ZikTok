@@ -5,6 +5,7 @@ A vanilla JavaScript Progressive Web App (PWA) that provides a TikTok-style inte
 ## Table of Contents
 
 - [Features](#features)
+- [Recent Updates](#recent-updates)
 - [Architecture Overview](#architecture-overview)
 - [Project Structure](#project-structure)
 - [Setup and Installation](#setup-and-installation)
@@ -22,7 +23,7 @@ A vanilla JavaScript Progressive Web App (PWA) that provides a TikTok-style inte
 
 ## Features
 
-- 📱 **TikTok-style vertical video interface** - Swipe up/down to navigate
+- 📱 **TikTok-style vertical video interface** - Swipe up/down to navigate through videos
 - 🎥 **YouTube Shorts integration** - Pulls shorts from your favorite channels
 - 📊 **Watch history tracking** - Automatically tracks videos watched for more than 2 seconds
 - 🚫 **24-hour replay prevention** - Skip videos you've already watched in the last 24 hours
@@ -31,10 +32,29 @@ A vanilla JavaScript Progressive Web App (PWA) that provides a TikTok-style inte
 - 🔀 **Multiple sort modes** - Sort by date or random shuffle
 - 🔇 **Mute control** - Toggle audio on/off
 - 📤 **Share functionality** - Share videos directly from the app
-- ⚙️ **Channel management** - Add/remove YouTube channels dynamically
+- ⚙️ **Channel management** - Add/remove YouTube channels dynamically with search
+- 🔄 **Force refresh** - Clear all cached files and reload (solves iOS cache issues)
 - 📴 **Offline support** - PWA with service worker caching
 - 🎯 **Vanilla JavaScript** - No frameworks, lightweight and fast
 - 🖥️ **Keyboard navigation** - Arrow keys for desktop use
+- 📲 **Optimized touch events** - Smooth swipe gestures that work reliably on all devices
+
+## Recent Updates
+
+### Swipe Gesture Fix (Latest)
+Fixed a critical issue where video iframes were capturing all touch events, preventing swipe gestures from working. The solution adds `pointer-events: none` to iframes, allowing touch events to pass through to the swipe handlers while maintaining video playback functionality.
+
+### Force Refresh Feature
+Added a "Force Refresh App" button in settings that clears all cached files and reloads the app. This is especially useful on iOS devices where aggressive caching can prevent the latest app version from loading even after page reloads. The feature:
+- Clears all Cache API caches
+- Unregisters all service workers
+- Reloads with cache-busting timestamp
+
+### UI/UX Improvements
+- Updated settings icon from generic pattern to proper cog/gear icon
+- Moved navigation icons to vertical layout on the right side
+- Hidden sort buttons for cleaner interface
+- All icons now positioned vertically on the right for easier thumb access
 
 ## Architecture Overview
 
@@ -320,7 +340,7 @@ User swipes → Update index → Reposition slides
     <!-- Dynamically created slides -->
   </div>
 
-  <!-- Top bar (history, settings, sort buttons) -->
+  <!-- Right-side vertical icon bar (history, settings) -->
   <div class="top-bar">...</div>
 
   <!-- Right controls (mute, share) -->
@@ -329,7 +349,7 @@ User swipes → Update index → Reposition slides
   <!-- Bottom video info -->
   <div class="video-info">...</div>
 
-  <!-- Settings modal -->
+  <!-- Settings modal (with force refresh button) -->
   <div id="settings-modal">...</div>
 
   <!-- Watch history modal -->
@@ -1063,6 +1083,23 @@ docker update --memory="512m" ziktok
 1. Deploy to HTTPS host or use localhost
 2. Check service worker registration in DevTools
 3. Validate manifest.json
+
+### App showing old version (iOS cache issue)
+
+**Causes**:
+1. iOS Safari aggressive caching
+2. PWA cached assets not updating
+3. Service worker holding old files
+
+**Solutions**:
+1. **Use Force Refresh** (recommended): Open Settings → Click "🔄 Force Refresh App"
+2. **Manual clear**: Safari Settings → Clear History and Website Data
+3. **Remove and reinstall PWA**: Delete app from home screen and reinstall
+
+The Force Refresh feature specifically addresses iOS caching by:
+- Clearing all Cache API entries
+- Unregistering service workers
+- Reloading with cache-busting timestamp
 
 ## Maintenance Guide
 
