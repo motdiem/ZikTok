@@ -96,6 +96,7 @@ iframe {
   width: 100%;
   height: 100%;
   border: none;
+  pointer-events: none; /* Allow touch events to pass through for swiping */
 }
 
 /* Ensure 9:16 aspect ratio for shorts */
